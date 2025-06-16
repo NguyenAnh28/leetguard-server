@@ -1,2 +1,2 @@
-# leetblock-server
-Backend code for LeetBlock
+# leetguard-server
+Backend code for LeetGuard
