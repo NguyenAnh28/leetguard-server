@@ -11,6 +11,5 @@ engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-
 from app.models.user import Base
 Base.metadata.create_all(bind=engine)
