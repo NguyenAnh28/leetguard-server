@@ -12,3 +12,8 @@ class UserOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+# Schema for email verification input. Used when a user submits their code.
+class EmailVerificationInput(BaseModel):
+    email: EmailStr
+    code: str

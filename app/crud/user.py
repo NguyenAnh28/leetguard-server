@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user import UserCreate
 from passlib.context import CryptContext
+import random
+from datetime import datetime, timedelta, timezone
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -12,7 +14,17 @@ def get_user_by_email(db: Session, email: str):
 # Creates a new user in the database with a hashed password. Used during user registration.
 def create_user(db: Session, user: UserCreate):
     hashed_password = pwd_context.hash(user.password)
-    db_user = User(email=user.email, hashed_password=hashed_password)
+    verification_code = f"{random.randint(0, 999999):06d}"
+    verification_code_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+    now = datetime.now(timezone.utc)
+    db_user = User(
+        email=user.email,
+        hashed_password=hashed_password,
+        is_verified=False,
+        verification_code=verification_code,
+        verification_code_expires=verification_code_expires,
+        last_code_sent_at=now
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

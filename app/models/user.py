@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -12,3 +12,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)  # User's email address
     hashed_password = Column(String, nullable=False)  # Hashed password for authentication
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Timestamp of account creation
+    is_verified = Column(Boolean, default=False)  # Whether the user's email is verified
+    verification_code = Column(String, nullable=True)  # 6-digit email verification code
+    verification_code_expires = Column(DateTime(timezone=True), nullable=True)  # Expiration time for the code
+    resend_cooldown_seconds = Column(Integer, default=30)  # Cooldown in seconds for resending code
+    last_code_sent_at = Column(DateTime(timezone=True), nullable=True)  # Last time a code was sent
+    resend_count = Column(Integer, default=0)  # Number of times code has been resent
