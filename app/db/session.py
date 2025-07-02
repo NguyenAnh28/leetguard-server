@@ -19,3 +19,11 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 from app.models.user import Base
 Base.metadata.create_all(bind=engine)
+
+# Dependency for getting a database session. Use with FastAPI Depends.
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
