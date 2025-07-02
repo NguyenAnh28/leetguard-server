@@ -5,10 +5,9 @@ from app.db.session import SessionLocal
 from app.schemas.user import UserCreate, UserOut
 from app.schemas.token import Token
 from app.crud.user import get_user_by_email, create_user
-from app.utils.jwt import create_access_token, create_refresh_token
+from app.utils import jwt as jwt_utils
 from app.crud.user import verify_password
 from app.crud import user as user_crud
-
 
 app = FastAPI()
 
@@ -39,15 +38,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not user_crud.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
-    access_token = create_access_token(data={"sub": str(user.id)})
-    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    access_token = jwt_utils.create_access_token(data={"sub": str(user.id)})
+    refresh_token = jwt_utils.create_refresh_token(data={"sub": str(user.id)})
 
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 
 @app.post("/auth/refresh", response_model = Token)
 def refresh_token(refresh_token: str = Body(...)):
-    payload = utils.decode_refresh_token(refresh_token)
+    payload = jwt_utils.decode_refresh_token(refresh_token)
     if payload is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
     
@@ -55,7 +54,7 @@ def refresh_token(refresh_token: str = Body(...)):
     if user_id is None: 
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token payload")
     
-    access_token = utils.create_access_token(data={"sub": user_id})
-    new_refresh_token = utils.create_refresh_token(data={"sub": user_id})
+    access_token = jwt_utils.create_access_token(data={"sub": user_id})
+    new_refresh_token = jwt_utils.create_refresh_token(data={"sub": user_id})
 
     return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
