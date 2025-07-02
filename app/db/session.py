@@ -1,3 +1,5 @@
+# Sets up the database connection and session for the app. Handles connecting to the database and creating tables.
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os 
