@@ -104,7 +104,6 @@ def verify_email_code(data: EmailVerificationInput, db: Session = Depends(get_db
     user.verification_code = None
     user.verification_code_expires = None
     user.resend_cooldown_seconds = 30
-    user.resend_count = 0
     user.last_code_sent_at = None
     db.commit()
     
@@ -124,11 +123,11 @@ def resend_verification_code(data: EmailVerificationInput, db: Session = Depends
     if user.is_verified:
         return {"message": "Email already verified."}
     now = datetime.now(timezone.utc)
-    # Cooldown logic
+    # Cooldown logic - fixed 30 seconds
     if user.last_code_sent_at:
         elapsed = (now - user.last_code_sent_at).total_seconds()
-        if elapsed < user.resend_cooldown_seconds:
-            wait_time = int(user.resend_cooldown_seconds - elapsed)
+        if elapsed < 30:  # Fixed 30-second cooldown
+            wait_time = int(30 - elapsed)
             raise HTTPException(status_code=429, detail=f"You can request a new code in {wait_time} seconds.")
     # Generate new code and expiration
     new_code = f"{random.randint(0, 999999):06d}"
@@ -136,16 +135,8 @@ def resend_verification_code(data: EmailVerificationInput, db: Session = Depends
     user.verification_code = new_code
     user.verification_code_expires = new_expiration
     user.last_code_sent_at = now
-    # Update cooldown and count
-    if user.resend_count == 0:
-        user.resend_cooldown_seconds = 30
-    elif user.resend_count == 1:
-        user.resend_cooldown_seconds = 60
-    elif user.resend_count == 2:
-        user.resend_cooldown_seconds = 120
-    else:
-        user.resend_cooldown_seconds = 240
-    user.resend_count += 1
+    # Set fixed 30-second cooldown
+    user.resend_cooldown_seconds = 30
     db.commit()
     
     # Send verification email

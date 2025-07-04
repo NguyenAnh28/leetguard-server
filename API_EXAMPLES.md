@@ -279,12 +279,7 @@ GET /health
 
 ## Rate Limiting
 
-The resend verification endpoint implements progressive rate limiting:
-
-- **1st attempt**: 30 seconds cooldown
-- **2nd attempt**: 60 seconds cooldown
-- **3rd attempt**: 120 seconds cooldown
-- **4th+ attempts**: 240 seconds cooldown
+The resend verification endpoint implements a fixed 30-second cooldown between requests to prevent abuse.
 
 ## Testing with cURL
 

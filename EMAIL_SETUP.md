@@ -120,9 +120,8 @@ The application includes three types of emails:
 
 ### Rate Limiting
 
-- Verification codes have progressive cooldowns: 30s → 60s → 120s → 240s
-- Maximum 5 resend attempts per user
-- Prevents email abuse
+- Verification codes have a fixed 30-second cooldown between requests
+- Prevents email abuse while maintaining good user experience
 
 ### Error Handling
 

@@ -17,4 +17,3 @@ class User(Base):
     verification_code_expires = Column(DateTime(timezone=True), nullable=True)  # Expiration time for the code
     resend_cooldown_seconds = Column(Integer, default=30)  # Cooldown in seconds for resending code
     last_code_sent_at = Column(DateTime(timezone=True), nullable=True)  # Last time a code was sent
-    resend_count = Column(Integer, default=0)  # Number of times code has been resent
