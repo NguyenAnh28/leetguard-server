@@ -23,11 +23,31 @@ class TestAuthEndpoints:
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["email"] == test_user_data["email"]
-        assert "id" in data
-        assert "password" not in data  # Password should not be returned
+        assert data["user"]["email"] == test_user_data["email"]
+        assert "id" in data["user"]
+        assert "password" not in data["user"]  # Password should not be returned
+        assert data["email_sent"] is True
+        assert "successfully" in data["message"]
         
         # Verify email was sent
+        mock_send_email.assert_called_once()
+    
+    @patch('app.utils.email.send_verification_email')
+    def test_user_signup_email_failure(self, mock_send_email, client, test_user_data):
+        """Test user signup when email sending fails."""
+        mock_send_email.return_value = False
+        
+        response = client.post("/auth/signup", json=test_user_data)
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["user"]["email"] == test_user_data["email"]
+        assert "id" in data["user"]
+        assert data["email_sent"] is False
+        assert "couldn't send" in data["message"]
+        assert "resend" in data["message"]
+        
+        # Verify email was attempted
         mock_send_email.assert_called_once()
     
     def test_user_signup_duplicate_email(self, client, test_user_data):
@@ -150,10 +170,30 @@ class TestAuthEndpoints:
         response = client.post("/auth/resend-verification-code", json=resend_data)
         
         assert response.status_code == status.HTTP_200_OK
-        assert "Verification code resent" in response.json()["message"]
+        assert "Verification code resent successfully" in response.json()["message"]
         
         # Verify email was sent again
         assert mock_send_email.call_count == 2  # Once for signup, once for resend
+    
+    @patch('app.utils.email.send_verification_email')
+    def test_resend_verification_code_failure(self, mock_send_email, client, test_user_data):
+        """Test resending verification code when email fails."""
+        # First call succeeds (signup), second call fails (resend)
+        mock_send_email.side_effect = [True, False]
+        
+        # Create user
+        response = client.post("/auth/signup", json=test_user_data)
+        assert response.status_code == status.HTTP_200_OK
+        
+        # Try to resend verification code
+        resend_data = {
+            "email": test_user_data["email"],
+            "code": "000000"
+        }
+        response = client.post("/auth/resend-verification-code", json=resend_data)
+        
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert "Failed to send verification email" in response.json()["detail"]
     
     @patch('app.utils.email.send_verification_email')
     @patch('app.utils.email.send_welcome_email')

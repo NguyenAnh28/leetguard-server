@@ -13,6 +13,15 @@ class UserOut(BaseModel):
     class Config:
         orm_mode = True
 
+# Schema for signup response that includes email status
+class SignupResponse(BaseModel):
+    user: UserOut
+    email_sent: bool
+    message: str
+
+    class Config:
+        orm_mode = True
+
 # Schema for email verification input. Used when a user submits their code.
 class EmailVerificationInput(BaseModel):
     email: EmailStr

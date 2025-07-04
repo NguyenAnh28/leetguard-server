@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.schemas.user import UserCreate, UserOut, EmailVerificationInput
+from app.schemas.user import UserCreate, UserOut, EmailVerificationInput, SignupResponse
 from app.schemas.token import Token
 from app.crud.user import get_user_by_email, create_user, verify_password
 from app.utils import jwt as jwt_utils
@@ -26,7 +26,7 @@ def health_check(db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 # User registration endpoint. Allows anyone to sign up with an email and password.
-@app.post("/auth/signup", response_model=UserOut)
+@app.post("/auth/signup", response_model=SignupResponse)
 def signup(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, user.email)
     if db_user:
@@ -35,12 +35,22 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
     new_user = create_user(db, user)
-    # Send verification email (don't fail signup if email fails)
+    
+    # Send verification email
     email_sent = send_verification_email(new_user.email, new_user.verification_code)
-    if not email_sent:
-        # Log the failure but don't prevent signup
+    
+    if email_sent:
+        message = "Account created successfully! Please check your email for verification code."
+    else:
+        message = "Account created successfully! However, we couldn't send the verification email. Please use the resend feature or contact support."
+        # Log the failure for monitoring
         print(f"Warning: Failed to send verification email to {new_user.email}")
-    return new_user
+    
+    return SignupResponse(
+        user=new_user,
+        email_sent=email_sent,
+        message=message
+    )
 
 # User login endpoint. Allows registered users to log in and receive access and refresh tokens.
 @app.post("/auth/login", response_model=Token)
@@ -103,7 +113,7 @@ def verify_email_code(data: EmailVerificationInput, db: Session = Depends(get_db
     if not welcome_sent:
         print(f"Warning: Failed to send welcome email to {user.email}")
     
-    return {"message": "Email verified successfully."}
+    return {"message": "Email verified successfully! Welcome to LeetGuard!"}
 
 # Resend verification code endpoint. Allows users to request a new code if not yet verified.
 @app.post("/auth/resend-verification-code")
@@ -138,9 +148,12 @@ def resend_verification_code(data: EmailVerificationInput, db: Session = Depends
     user.resend_count += 1
     db.commit()
     
-    # Send verification email (don't fail resend if email fails)
+    # Send verification email
     email_sent = send_verification_email(user.email, new_code)
     if not email_sent:
-        raise HTTPException(status_code=500, detail="Failed to send verification email. Please try again later.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Failed to send verification email. Please try again later or contact support if the problem persists."
+        )
     
-    return {"message": "Verification code resent."}
+    return {"message": "Verification code resent successfully. Please check your email."}

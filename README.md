@@ -62,7 +62,7 @@ This application uses [Resend](https://resend.com) for sending emails. To set up
 ## API
 
 - `GET /health` — health check
-- `POST /auth/signup` — signup with email verification
+- `POST /auth/signup` — signup with email verification (returns email status)
 - `POST /auth/login` — login (requires email verification)
 - `POST /auth/refresh` — refresh access token
 - `GET /me` — get current user info
