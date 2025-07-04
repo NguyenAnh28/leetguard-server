@@ -22,6 +22,12 @@ class SignupResponse(BaseModel):
     class Config:
         orm_mode = True
 
+# Schema for login response when email verification is needed
+class LoginVerificationResponse(BaseModel):
+    message: str
+    email_sent: bool
+    verification_url: str
+
 # Schema for email verification input. Used when a user submits their code.
 class EmailVerificationInput(BaseModel):
     email: EmailStr

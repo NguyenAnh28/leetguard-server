@@ -73,11 +73,23 @@ username=user@example.com&password=securepassword123
 }
 ```
 
-**Response (Error - Unverified Email):**
+**Response (Unverified Email - Email Sent):**
 
 ```json
 {
-  "detail": "Please verify your email before logging in."
+  "message": "Please verify your email before logging in. A new verification code has been sent to your email.",
+  "email_sent": true,
+  "verification_url": "https://leetguard.com/verify-email"
+}
+```
+
+**Response (Unverified Email - Email Failed):**
+
+```json
+{
+  "message": "Please verify your email before logging in. We couldn't send the verification email. Please use the resend feature.",
+  "email_sent": false,
+  "verification_url": "https://leetguard.com/verify-email"
 }
 ```
 
@@ -270,6 +282,9 @@ GET /health
    POST /auth/login
    username=user@example.com&password=securepassword123
    ```
+
+   - If email is verified → Returns access and refresh tokens
+   - If email is not verified → Returns verification response with new code sent
 
 5. **Use Access Token**
    ```bash

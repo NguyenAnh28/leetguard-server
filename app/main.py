@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.schemas.user import UserCreate, UserOut, EmailVerificationInput, SignupResponse
+from app.schemas.user import UserCreate, UserOut, EmailVerificationInput, SignupResponse, LoginVerificationResponse
 from app.schemas.token import Token
 from app.crud.user import get_user_by_email, create_user, verify_password
 from app.utils import jwt as jwt_utils
@@ -10,6 +10,8 @@ from app.dependencies import get_current_user
 from app.utils.email import send_verification_email, send_welcome_email
 from datetime import datetime, timedelta, timezone
 import random
+from app.config import settings
+from typing import Union
 
 app = FastAPI()
 
@@ -53,13 +55,39 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     )
 
 # User login endpoint. Allows registered users to log in and receive access and refresh tokens.
-@app.post("/auth/login", response_model=Token)
+@app.post("/auth/login", response_model=Union[Token, LoginVerificationResponse])
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = get_user_by_email(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_verified:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Please verify your email before logging in.")
+        # Generate new verification code and send email
+        now = datetime.now(timezone.utc)
+        new_code = f"{random.randint(0, 999999):06d}"
+        new_expiration = now + timedelta(minutes=10)
+        user.verification_code = new_code
+        user.verification_code_expires = new_expiration
+        user.last_code_sent_at = now
+        user.resend_cooldown_seconds = 30
+        db.commit()
+        
+        # Send verification email
+        email_sent = send_verification_email(user.email, new_code)
+        
+        if email_sent:
+            message = "Please verify your email before logging in. A new verification code has been sent to your email."
+        else:
+            message = "Please verify your email before logging in. We couldn't send the verification email. Please use the resend feature."
+            print(f"Warning: Failed to send verification email to {user.email}")
+        
+        # Return verification response instead of error
+        verification_url = f"{settings.FRONTEND_URL}/verify-email"
+        return LoginVerificationResponse(
+            message=message,
+            email_sent=email_sent,
+            verification_url=verification_url
+        )
+    
     access_token = jwt_utils.create_access_token(data={"sub": str(user.id)})
     refresh_token = jwt_utils.create_refresh_token(data={"sub": str(user.id)})
 
